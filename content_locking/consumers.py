@@ -120,7 +120,18 @@ class PresenceConsumer(AsyncWebsocketConsumer):
         If there is no owner, the article is empty, therefore is_dirty is reset
         to False and the users dict is in its blank state.
         """
+        # In some situations ``disconnect`` can be called before ``connect`` has
+        # successfully completed (for example, if the user is not authorised to
+        # access the websocket). In that case ``self.username`` will be ``None``
+        # and no entry will have been created in the cache. Guard against those
+        # scenarios by returning early if there is no user or the cache does not
+        # contain a record for this room.
+        if not user:
+            return
+
         users = cache.get(self.room_name)
+        if not users:
+            return
 
         if user in users["users_list"]:
             users["users_list"].remove(user)
