@@ -9,14 +9,16 @@ context of Wagtail, with the first use-case being **content-locking**.
 ## Requirements
 
 1. Wagtail
-2. Redis
+2. Django 4.2 or higher
+3. Channels 3 or higher
+4. Redis
 
 ## Installation
 
 1. In your Wagtail project, run:
 
 ```
-pip install git+https://github.com/nypublicradio/wagtail-websockets.git
+uv pip install git+https://github.com/nypublicradio/wagtail-websockets.git
 ```
 
 2. Add `channels` and `content_locking` to your `INSTALLED_APPS` **above all

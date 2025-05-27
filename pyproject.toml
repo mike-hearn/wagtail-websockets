@@ -1,15 +1,15 @@
-[tool.poetry]
+[project]
 name = "wagtail-websockets"
 version = "0.1.2"
-description = ""
-authors = ["Michael Hearn <git@mikehearn.net>"]
+description = "Wagtail admin integration with Django Channels"
+authors = [ { name = "Michael Hearn", email = "git@mikehearn.net" } ]
+requires-python = ">=3.8"
+dependencies = [
+    "channels>=3",
+    "django>=4.2",
+    "channels_redis>=3"
+]
 
-[tool.poetry.dependencies]
-python = "^3.7"
-channels = "^2.1"
-django = "^2.1"
-channels_redis = "^2.3"
-
-
-[tool.poetry.dev-dependencies]
-python-language-server = {version = "^0.22.0",extras = ["all"]}
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
