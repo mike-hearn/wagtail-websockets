@@ -49,9 +49,24 @@ window.contentLockingVueInstance = new Vue({
     owner: null,
     socket: null,
     usersPresent: [],
+    messageQueue: [],
   },
 
   methods: {
+    sendMessage: function(message) {
+      if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+        this.socket.send(JSON.stringify(message));
+      } else {
+        // Queue the message to be sent when connection is ready
+        this.messageQueue.push(message);
+      }
+    },
+    processMessageQueue: function() {
+      while (this.messageQueue.length > 0 && this.socket.readyState === WebSocket.OPEN) {
+        const message = this.messageQueue.shift();
+        this.socket.send(JSON.stringify(message));
+      }
+    },
     unlock: function() {
       if (this.isRemoteFormDirty) {
         this.manualState = this.STATE.INTRUDER_CONFLICT_CONFIRM_DIRTY;
@@ -60,7 +75,7 @@ window.contentLockingVueInstance = new Vue({
       this.manualState = this.STATE.INTRUDER_CONFLICT_CONFIRM;
     },
     forceUnlock: function() {
-      this.socket.send(JSON.stringify({event: 'force_unlock'}));
+      this.sendMessage({event: 'force_unlock'});
       this.manualState = null;
     },
     cancelUnlock: function() {
@@ -83,13 +98,39 @@ window.contentLockingVueInstance = new Vue({
       this.isRemoteFormDirty = data.people_here.is_dirty;
     };
 
+    this.socket.onopen = () => {
+      // Process any queued messages when connection is established
+      this.processMessageQueue();
+    };
+
+    this.socket.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+
+    this.socket.onclose = (event) => {
+      console.log('WebSocket connection closed:', event.code, event.reason);
+    };
+
     // Setup listener to detect if form values have changed & set isFormDirty
     var _this = this;
-    _this.initialFormData = $('#page-edit-form').serialize();
-    $('#page-edit-form').on('change keyup paste', ':input', function() {
-      _this.isFormDirty =
-        _this.initialFormData !== $('#page-edit-form').serialize();
-    });
+    
+    // Function to check if form is dirty using Stimulus controller
+    function checkFormDirty() {
+      const form = document.querySelector('[data-controller~="w-unsaved"]');
+      const application = window.Stimulus || window.wagtail.app;
+      if (form && application) {
+        const controller = application.getControllerForElementAndIdentifier(form, 'w-unsaved');
+        if (controller) {
+          _this.isFormDirty = controller.hasEditsValue;
+        }
+      }
+    }
+    
+    // Set up periodic checking for form dirty state
+    setInterval(checkFormDirty, 500);
+    
+    // Also check immediately
+    setTimeout(checkFormDirty, 100);
   },
 
   computed: {
@@ -162,7 +203,7 @@ window.contentLockingVueInstance = new Vue({
      * dirty, or vice versa.
      */
     isFormDirty: function(dirty) {
-      this.socket.send(JSON.stringify({event: 'form_dirty_' + dirty}));
+      this.sendMessage({event: 'form_dirty_' + dirty});
     },
   },
 });
